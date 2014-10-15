@@ -1262,7 +1262,9 @@ extension Request: DebugPrintable {
         }
         
         if let HTTPBody = request.HTTPBody {
-            components.append("-d \"\(NSString(data: HTTPBody, encoding: NSUTF8StringEncoding))\"")
+            let escapedBody = NSString(data: HTTPBody, encoding: NSUTF8StringEncoding)
+                                .stringByReplacingOccurrencesOfString("\"", withString: "\\\"")
+            components.append("-d \"\(escapedBody)\"")
         }
 
         components.append("\"\(URL.absoluteString!)\"")
