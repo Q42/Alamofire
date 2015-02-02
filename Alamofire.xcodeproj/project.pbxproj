@@ -9,6 +9,11 @@
 /* Begin PBXBuildFile section */
 		4DD67C241A5C58FB00ED2280 /* Alamofire.h in Headers */ = {isa = PBXBuildFile; fileRef = F8111E3819A95C8B0040E7D1 /* Alamofire.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4DD67C251A5C590000ED2280 /* Alamofire.swift in Sources */ = {isa = PBXBuildFile; fileRef = F897FF4019AA800700AB5182 /* Alamofire.swift */; };
+		D5E1DA161A7FD90F007C0FED /* AFSecurityPolicy.h in Headers */ = {isa = PBXBuildFile; fileRef = D5E1DA141A7FD90F007C0FED /* AFSecurityPolicy.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5E1DA171A7FD90F007C0FED /* AFSecurityPolicy.h in Headers */ = {isa = PBXBuildFile; fileRef = D5E1DA141A7FD90F007C0FED /* AFSecurityPolicy.h */; };
+		D5E1DA181A7FD90F007C0FED /* AFSecurityPolicy.m in Sources */ = {isa = PBXBuildFile; fileRef = D5E1DA151A7FD90F007C0FED /* AFSecurityPolicy.m */; };
+		D5E1DA191A7FD90F007C0FED /* AFSecurityPolicy.m in Sources */ = {isa = PBXBuildFile; fileRef = D5E1DA151A7FD90F007C0FED /* AFSecurityPolicy.m */; };
+		D5E1DA2A1A7FEA29007C0FED /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D5E1DA291A7FEA29007C0FED /* Security.framework */; };
 		F8111E3919A95C8B0040E7D1 /* Alamofire.h in Headers */ = {isa = PBXBuildFile; fileRef = F8111E3819A95C8B0040E7D1 /* Alamofire.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		F8111E6019A9674D0040E7D1 /* DownloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8111E5B19A9674D0040E7D1 /* DownloadTests.swift */; };
 		F8111E6119A9674D0040E7D1 /* ParameterEncodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8111E5C19A9674D0040E7D1 /* ParameterEncodingTests.swift */; };
@@ -49,6 +54,9 @@
 
 /* Begin PBXFileReference section */
 		4DD67C0B1A5C55C900ED2280 /* Alamofire.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Alamofire.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D5E1DA141A7FD90F007C0FED /* AFSecurityPolicy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFSecurityPolicy.h; sourceTree = "<group>"; };
+		D5E1DA151A7FD90F007C0FED /* AFSecurityPolicy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AFSecurityPolicy.m; sourceTree = "<group>"; };
+		D5E1DA291A7FEA29007C0FED /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		F8111E3319A95C8B0040E7D1 /* Alamofire.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Alamofire.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8111E3719A95C8B0040E7D1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F8111E3819A95C8B0040E7D1 /* Alamofire.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Alamofire.h; sourceTree = "<group>"; };
@@ -60,7 +68,7 @@
 		F8111E5E19A9674D0040E7D1 /* ResponseTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResponseTests.swift; sourceTree = "<group>"; };
 		F8111E5F19A9674D0040E7D1 /* UploadTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UploadTests.swift; sourceTree = "<group>"; };
 		F829C6B21A7A94F100A2CD59 /* Alamofire OSX Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Alamofire OSX Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		F897FF4019AA800700AB5182 /* Alamofire.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Alamofire.swift; sourceTree = "<group>"; };
+		F897FF4019AA800700AB5182 /* Alamofire.swift */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.swift; path = Alamofire.swift; sourceTree = "<group>"; tabWidth = 4; };
 		F8AE910119D28DCC0078C7B2 /* ValidationTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValidationTests.swift; sourceTree = "<group>"; };
 		F8D1C6F419D52968002E74FE /* ManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagerTests.swift; sourceTree = "<group>"; };
 		F8E6024419CB46A800A3E7F1 /* AuthenticationTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthenticationTests.swift; sourceTree = "<group>"; };
@@ -78,6 +86,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D5E1DA2A1A7FEA29007C0FED /* Security.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -102,6 +111,7 @@
 		F8111E2919A95C8B0040E7D1 = {
 			isa = PBXGroup;
 			children = (
+				D5E1DA291A7FEA29007C0FED /* Security.framework */,
 				F8111E3519A95C8B0040E7D1 /* Source */,
 				F8111E3F19A95C8B0040E7D1 /* Tests */,
 				F8111E3419A95C8B0040E7D1 /* Products */,
@@ -123,6 +133,8 @@
 			isa = PBXGroup;
 			children = (
 				F8111E3819A95C8B0040E7D1 /* Alamofire.h */,
+				D5E1DA141A7FD90F007C0FED /* AFSecurityPolicy.h */,
+				D5E1DA151A7FD90F007C0FED /* AFSecurityPolicy.m */,
 				F897FF4019AA800700AB5182 /* Alamofire.swift */,
 				F8111E3619A95C8B0040E7D1 /* Supporting Files */,
 			);
@@ -169,6 +181,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4DD67C241A5C58FB00ED2280 /* Alamofire.h in Headers */,
+				D5E1DA171A7FD90F007C0FED /* AFSecurityPolicy.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -177,6 +190,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F8111E3919A95C8B0040E7D1 /* Alamofire.h in Headers */,
+				D5E1DA161A7FD90F007C0FED /* AFSecurityPolicy.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -334,6 +348,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D5E1DA191A7FD90F007C0FED /* AFSecurityPolicy.m in Sources */,
 				4DD67C251A5C590000ED2280 /* Alamofire.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -342,6 +357,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D5E1DA181A7FD90F007C0FED /* AFSecurityPolicy.m in Sources */,
 				F897FF4119AA800700AB5182 /* Alamofire.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -395,6 +411,7 @@
 		4DD67C1F1A5C55C900ED2280 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
@@ -412,12 +429,15 @@
 				PRODUCT_NAME = Alamofire;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
 		4DD67C201A5C55C900ED2280 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEFINES_MODULE = YES;
@@ -432,6 +452,7 @@
 				PRODUCT_NAME = Alamofire;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
 			};
 			name = Release;
 		};
@@ -538,6 +559,7 @@
 				PRODUCT_NAME = Alamofire;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
+				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -558,6 +580,7 @@
 				PRODUCT_NAME = Alamofire;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
+				SWIFT_OBJC_BRIDGING_HEADER = "";
 			};
 			name = Release;
 		};

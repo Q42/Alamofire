@@ -287,14 +287,18 @@ public class Manager {
     /// The underlying session.
     public let session: NSURLSession
 
+    /// The security policy used
+    public let securityPolicy: AFSecurityPolicy
+
     /// Whether to start requests immediately after being constructed. `true` by default.
     public var startRequestsImmediately: Bool = true
 
     /**
         :param: configuration The configuration used to construct the managed session.
     */
-    required public init(configuration: NSURLSessionConfiguration? = nil) {
-        self.delegate = SessionDelegate()
+    required public init(configuration: NSURLSessionConfiguration? = nil, securityPolicy: AFSecurityPolicy = AFSecurityPolicy.defaultPolicy()) {
+        self.securityPolicy = securityPolicy
+        self.delegate = SessionDelegate(securityPolicy: securityPolicy)
         self.session = NSURLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
     }
 
@@ -330,7 +334,7 @@ public class Manager {
             dataTask = self.session.dataTaskWithRequest(URLRequest.URLRequest)
         }
 
-        let request = Request(session: session, task: dataTask!)
+        let request = Request(session: session, securityPolicy: self.securityPolicy, task: dataTask!)
         delegate[request.delegate.task] = request.delegate
 
         if startRequestsImmediately {
@@ -341,6 +345,7 @@ public class Manager {
     }
 
     class SessionDelegate: NSObject, NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDataDelegate, NSURLSessionDownloadDelegate {
+        private let securityPolicy: AFSecurityPolicy
         private var subdelegates: [Int: Request.TaskDelegate]
         private let subdelegateQueue = dispatch_queue_create(nil, DISPATCH_QUEUE_CONCURRENT)
         private subscript(task: NSURLSessionTask) -> Request.TaskDelegate? {
@@ -378,8 +383,9 @@ public class Manager {
         var downloadTaskDidWriteData: ((NSURLSession!, NSURLSessionDownloadTask!, Int64, Int64, Int64) -> Void)?
         var downloadTaskDidResumeAtOffset: ((NSURLSession!, NSURLSessionDownloadTask!, Int64, Int64) -> Void)?
 
-        required override init() {
+        required init(securityPolicy: AFSecurityPolicy) {
             self.subdelegates = Dictionary()
+            self.securityPolicy = securityPolicy
             super.init()
         }
 
@@ -453,7 +459,7 @@ public class Manager {
         }
 
         func URLSession(session: NSURLSession!, dataTask: NSURLSessionDataTask!, didBecomeDownloadTask downloadTask: NSURLSessionDownloadTask!) {
-            let downloadDelegate = Request.DownloadTaskDelegate(task: downloadTask)
+            let downloadDelegate = Request.DownloadTaskDelegate(task: downloadTask, securityPolicy: securityPolicy)
             self[downloadTask] = downloadDelegate
         }
 
@@ -538,6 +544,9 @@ public class Request {
     /// The session belonging to the underlying task.
     public let session: NSURLSession
 
+    /// Security policy for this request
+    public let securityPolicy: AFSecurityPolicy
+
     /// The request sent or to be sent to the server.
     public var request: NSURLRequest { return task.originalRequest }
 
@@ -547,18 +556,19 @@ public class Request {
     /// The progress of the request lifecycle.
     public var progress: NSProgress? { return delegate.progress }
 
-    private init(session: NSURLSession, task: NSURLSessionTask) {
+    private init(session: NSURLSession, securityPolicy: AFSecurityPolicy, task: NSURLSessionTask) {
         self.session = session
+        self.securityPolicy = securityPolicy
 
         switch task {
         case is NSURLSessionUploadTask:
-            self.delegate = UploadTaskDelegate(task: task)
+            self.delegate = UploadTaskDelegate(task: task, securityPolicy: securityPolicy)
         case is NSURLSessionDataTask:
-            self.delegate = DataTaskDelegate(task: task)
+            self.delegate = DataTaskDelegate(task: task, securityPolicy: securityPolicy)
         case is NSURLSessionDownloadTask:
-            self.delegate = DownloadTaskDelegate(task: task)
+            self.delegate = DownloadTaskDelegate(task: task, securityPolicy: securityPolicy)
         default:
-            self.delegate = TaskDelegate(task: task)
+            self.delegate = TaskDelegate(task: task, securityPolicy: securityPolicy)
         }
     }
 
@@ -694,6 +704,7 @@ public class Request {
 
     class TaskDelegate: NSObject, NSURLSessionTaskDelegate {
         let task: NSURLSessionTask
+        let securityPolicy: AFSecurityPolicy
         let queue: dispatch_queue_t
         let progress: NSProgress
 
@@ -707,9 +718,10 @@ public class Request {
         var taskDidSendBodyData: ((NSURLSession!, NSURLSessionTask!, Int64, Int64, Int64) -> Void)?
         var taskNeedNewBodyStream: ((NSURLSession!, NSURLSessionTask!) -> (NSInputStream!))?
 
-        init(task: NSURLSessionTask) {
+        init(task: NSURLSessionTask, securityPolicy: AFSecurityPolicy) {
             self.task = task
             self.progress = NSProgress(totalUnitCount: 0)
+            self.securityPolicy = securityPolicy
             self.queue = {
                 let label: String = "com.alamofire.task-\(task.taskIdentifier)"
                 let queue = dispatch_queue_create((label as NSString).UTF8String, DISPATCH_QUEUE_SERIAL)
@@ -745,7 +757,11 @@ public class Request {
 
                     switch challenge.protectionSpace.authenticationMethod! {
                     case NSURLAuthenticationMethodServerTrust:
-                        credential = NSURLCredential(forTrust: challenge.protectionSpace.serverTrust)
+                        if securityPolicy.evaluateServerTrust(challenge.protectionSpace.serverTrust, forDomain: challenge.protectionSpace.host) {
+                            credential = NSURLCredential(forTrust: challenge.protectionSpace.serverTrust)
+                        } else {
+                            disposition = .CancelAuthenticationChallenge
+                        }
                     default:
                         credential = self.credential ?? session.configuration.URLCredentialStorage?.defaultCredentialForProtectionSpace(challenge.protectionSpace)
                     }
@@ -793,9 +809,9 @@ public class Request {
         var dataTaskWillCacheResponse: ((NSURLSession!, NSURLSessionDataTask!, NSCachedURLResponse!) -> (NSCachedURLResponse))?
         var dataProgress: ((bytesReceived: Int64, totalBytesReceived: Int64, totalBytesExpectedToReceive: Int64) -> Void)?
 
-        override init(task: NSURLSessionTask) {
+        override init(task: NSURLSessionTask, securityPolicy: AFSecurityPolicy) {
             self.mutableData = NSMutableData()
-            super.init(task: task)
+            super.init(task: task, securityPolicy: securityPolicy)
         }
 
         // MARK: NSURLSessionDataDelegate
@@ -1001,7 +1017,7 @@ extension Manager {
             HTTPBodyStream = stream
         }
 
-        let request = Request(session: session, task: uploadTask)
+        let request = Request(session: session, securityPolicy: securityPolicy, task: uploadTask)
         if HTTPBodyStream != nil {
             request.delegate.taskNeedNewBodyStream = { _, _ in
                 return HTTPBodyStream
@@ -1099,7 +1115,7 @@ extension Manager {
             downloadTask = session.downloadTaskWithResumeData(resumeData)
         }
 
-        let request = Request(session: session, task: downloadTask)
+        let request = Request(session: session, securityPolicy: securityPolicy, task: downloadTask)
         if let downloadDelegate = request.delegate as? Request.DownloadTaskDelegate {
             downloadDelegate.downloadTaskDidFinishDownloadingToURL = { (session, downloadTask, URL) in
                 return destination(URL, downloadTask.response as NSHTTPURLResponse)
