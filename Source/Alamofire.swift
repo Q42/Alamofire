@@ -1,6 +1,6 @@
 // Alamofire.swift
 //
-// Copyright (c) 2014 Alamofire (http://alamofire.org)
+// Copyright (c) 2014–2015 Alamofire (http://alamofire.org)
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -106,7 +106,7 @@ public enum ParameterEncoding {
             let method = Method(rawValue: mutableURLRequest.HTTPMethod)
             if method != nil && encodesParametersInURL(method!) {
                 if let URLComponents = NSURLComponents(URL: mutableURLRequest.URL!, resolvingAgainstBaseURL: false) {
-                    URLComponents.percentEncodedQuery = (URLComponents.query != nil ? URLComponents.query! + "&" : "") + query(parameters!)
+                    URLComponents.percentEncodedQuery = (URLComponents.percentEncodedQuery != nil ? URLComponents.percentEncodedQuery! + "&" : "") + query(parameters!)
                     mutableURLRequest.URL = URLComponents.URL
                 }
             } else {
@@ -211,6 +211,8 @@ extension NSURLRequest: URLRequestConvertible {
 
 /**
     Responsible for creating and managing `Request` objects, as well as their underlying `NSURLSession`.
+
+    When finished with a manager, be sure to call either `session.finishTasksAndInvalidate()` or `session.invalidateAndCancel()` before deinitialization.
 */
 public class Manager {
 
@@ -221,46 +223,7 @@ public class Manager {
         struct Singleton {
             static var configuration: NSURLSessionConfiguration = {
                 var configuration = NSURLSessionConfiguration.defaultSessionConfiguration()
-
-                configuration.HTTPAdditionalHeaders = {
-                    // Accept-Encoding HTTP Header; see http://tools.ietf.org/html/rfc7230#section-4.2.3
-                    let acceptEncoding: String = "gzip;q=1.0,compress;q=0.5"
-
-                    // Accept-Language HTTP Header; see http://tools.ietf.org/html/rfc7231#section-5.3.5
-                    let acceptLanguage: String = {
-                        var components: [String] = []
-                        for (index, languageCode) in enumerate(NSLocale.preferredLanguages() as [String]) {
-                            let q = 1.0 - (Double(index) * 0.1)
-                            components.append("\(languageCode);q=\(q)")
-                            if q <= 0.5 {
-                                break
-                            }
-                        }
-
-                        return join(",", components)
-                    }()
-
-                    // User-Agent Header; see http://tools.ietf.org/html/rfc7231#section-5.5.3
-                    let userAgent: String = {
-                        if let info = NSBundle.mainBundle().infoDictionary {
-                            let executable: AnyObject = info[kCFBundleExecutableKey] ?? "Unknown"
-                            let bundle: AnyObject = info[kCFBundleIdentifierKey] ?? "Unknown"
-                            let version: AnyObject = info[kCFBundleVersionKey] ?? "Unknown"
-                            let os: AnyObject = NSProcessInfo.processInfo().operatingSystemVersionString ?? "Unknown"
-
-                            var mutableUserAgent = NSMutableString(string: "\(executable)/\(bundle) (\(version); OS \(os))") as CFMutableString
-                            let transform = NSString(string: "Any-Latin; Latin-ASCII; [:^ASCII:] Remove") as CFString
-                            if CFStringTransform(mutableUserAgent, nil, transform, 0) == 1 {
-                                return mutableUserAgent as NSString
-                            }
-                        }
-                        return "Alamofire"
-                    }()
-
-                    return ["Accept-Encoding": acceptEncoding,
-                            "Accept-Language": acceptLanguage,
-                            "User-Agent": userAgent]
-                }()
+                configuration.HTTPAdditionalHeaders = Manager.defaultHTTPHeaders()
 
                 return configuration
             }()
@@ -269,6 +232,52 @@ public class Manager {
         }
 
         return Singleton.instance
+    }
+
+    /**
+        Creates default values for the "Accept-Encoding", "Accept-Language" and "User-Agent" headers.
+
+        :returns: The default header values.
+    */
+    public class func defaultHTTPHeaders() -> [String: String] {
+
+        // Accept-Encoding HTTP Header; see http://tools.ietf.org/html/rfc7230#section-4.2.3
+        let acceptEncoding: String = "gzip;q=1.0,compress;q=0.5"
+
+        // Accept-Language HTTP Header; see http://tools.ietf.org/html/rfc7231#section-5.3.5
+        let acceptLanguage: String = {
+            var components: [String] = []
+            for (index, languageCode) in enumerate(NSLocale.preferredLanguages() as [String]) {
+                let q = 1.0 - (Double(index) * 0.1)
+                components.append("\(languageCode);q=\(q)")
+                if q <= 0.5 {
+                    break
+                }
+            }
+
+            return join(",", components)
+        }()
+
+        // User-Agent Header; see http://tools.ietf.org/html/rfc7231#section-5.5.3
+        let userAgent: String = {
+            if let info = NSBundle.mainBundle().infoDictionary {
+                let executable: AnyObject = info[kCFBundleExecutableKey] ?? "Unknown"
+                let bundle: AnyObject = info[kCFBundleIdentifierKey] ?? "Unknown"
+                let version: AnyObject = info[kCFBundleVersionKey] ?? "Unknown"
+                let os: AnyObject = NSProcessInfo.processInfo().operatingSystemVersionString ?? "Unknown"
+
+                var mutableUserAgent = NSMutableString(string: "\(executable)/\(bundle) (\(version); OS \(os))") as CFMutableString
+                let transform = NSString(string: "Any-Latin; Latin-ASCII; [:^ASCII:] Remove") as CFString
+                if CFStringTransform(mutableUserAgent, nil, transform, 0) == 1 {
+                    return mutableUserAgent as NSString
+                }
+            }
+            return "Alamofire"
+        }()
+
+        return ["Accept-Encoding": acceptEncoding,
+                "Accept-Language": acceptLanguage,
+                "User-Agent": userAgent]
     }
 
     private let delegate: SessionDelegate
@@ -287,10 +296,6 @@ public class Manager {
     required public init(configuration: NSURLSessionConfiguration? = nil) {
         self.delegate = SessionDelegate()
         self.session = NSURLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
-    }
-
-    deinit {
-        self.session.invalidateAndCancel()
     }
 
     // MARK: -
@@ -984,7 +989,7 @@ extension Manager {
 
     private func upload(uploadable: Uploadable) -> Request {
         var uploadTask: NSURLSessionUploadTask!
-        var stream: NSInputStream?
+        var HTTPBodyStream: NSInputStream?
 
         switch uploadable {
         case .Data(let request, let data):
@@ -993,12 +998,13 @@ extension Manager {
             uploadTask = session.uploadTaskWithRequest(request, fromFile: fileURL)
         case .Stream(let request, var stream):
             uploadTask = session.uploadTaskWithStreamedRequest(request)
+            HTTPBodyStream = stream
         }
 
         let request = Request(session: session, task: uploadTask)
-        if stream != nil {
+        if HTTPBodyStream != nil {
             request.delegate.taskNeedNewBodyStream = { _, _ in
-                return stream
+                return HTTPBodyStream
             }
         }
         delegate[request.delegate.task] = request.delegate
@@ -1067,12 +1073,10 @@ extension Request {
         // MARK: NSURLSessionTaskDelegate
 
         func URLSession(session: NSURLSession!, task: NSURLSessionTask!, didSendBodyData bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
-            if uploadProgress != nil {
-                uploadProgress(bytesSent, totalBytesSent, totalBytesExpectedToSend)
-            }
-
             progress.totalUnitCount = totalBytesExpectedToSend
             progress.completedUnitCount = totalBytesSent
+
+            uploadProgress?(bytesSent, totalBytesSent, totalBytesExpectedToSend)
         }
     }
 }
@@ -1085,7 +1089,7 @@ extension Manager {
         case ResumeData(NSData)
     }
 
-    private func download(downloadable: Downloadable, destination: (NSURL, NSHTTPURLResponse) -> (NSURL)) -> Request {
+    private func download(downloadable: Downloadable, destination: Request.DownloadFileDestination) -> Request {
         var downloadTask: NSURLSessionDownloadTask!
 
         switch downloadable {
@@ -1122,7 +1126,7 @@ extension Manager {
 
         :returns: The created download request.
     */
-    public func download(URLRequest: URLRequestConvertible, destination: (NSURL, NSHTTPURLResponse) -> (NSURL)) -> Request {
+    public func download(URLRequest: URLRequestConvertible, destination: Request.DownloadFileDestination) -> Request {
         return download(.Request(URLRequest.URLRequest), destination: destination)
     }
 
@@ -1160,7 +1164,7 @@ extension Request {
     public class func suggestedDownloadDestination(directory: NSSearchPathDirectory = .DocumentDirectory, domain: NSSearchPathDomainMask = .UserDomainMask) -> DownloadFileDestination {
 
         return { (temporaryURL, response) -> (NSURL) in
-            if let directoryURL = NSFileManager.defaultManager().URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask)[0] as? NSURL {
+            if let directoryURL = NSFileManager.defaultManager().URLsForDirectory(directory, inDomains: domain)[0] as? NSURL {
                 return directoryURL.URLByAppendingPathComponent(response.suggestedFilename!)
             }
 
@@ -1194,19 +1198,19 @@ extension Request {
         }
 
         func URLSession(session: NSURLSession!, downloadTask: NSURLSessionDownloadTask!, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+            progress.totalUnitCount = totalBytesExpectedToWrite
+            progress.completedUnitCount = totalBytesWritten
+
             downloadTaskDidWriteData?(session, downloadTask, bytesWritten, totalBytesWritten, totalBytesExpectedToWrite)
 
             downloadProgress?(bytesWritten, totalBytesWritten, totalBytesExpectedToWrite)
-
-            progress.totalUnitCount = totalBytesExpectedToWrite
-            progress.completedUnitCount = totalBytesWritten
         }
 
         func URLSession(session: NSURLSession!, downloadTask: NSURLSessionDownloadTask!, didResumeAtOffset fileOffset: Int64, expectedTotalBytes: Int64) {
-            downloadTaskDidResumeAtOffset?(session, downloadTask, fileOffset, expectedTotalBytes)
-
             progress.totalUnitCount = expectedTotalBytes
             progress.completedUnitCount = fileOffset
+
+            downloadTaskDidResumeAtOffset?(session, downloadTask, fileOffset, expectedTotalBytes)
         }
     }
 }
@@ -1254,30 +1258,38 @@ extension Request: DebugPrintable {
             }
         }
 
+        // Temporarily disabled on OS X due to build failure for CocoaPods
+        // See https://github.com/CocoaPods/swift/issues/24
+        #if !os(OSX)
         if let cookieStorage = session.configuration.HTTPCookieStorage {
             if let cookies = cookieStorage.cookiesForURL(URL) as? [NSHTTPCookie] {
                 if !cookies.isEmpty {
-                    let string = cookies.reduce(""){ $0 + "\($1.name)=\($1.value);" }
+                    let string = cookies.reduce(""){ $0 + "\($1.name)=\($1.value ?? String());" }
                     components.append("-b \"\(string.substringToIndex(string.endIndex.predecessor()))\"")
                 }
             }
         }
+        #endif
 
-        for (field, value) in request.allHTTPHeaderFields! {
-            switch field {
-            case "Cookie":
-                continue
-            default:
-                components.append("-H \"\(field): \(value)\"")
+        if request.allHTTPHeaderFields != nil {
+            for (field, value) in request.allHTTPHeaderFields! {
+                switch field {
+                case "Cookie":
+                    continue
+                default:
+                    components.append("-H \"\(field): \(value)\"")
+                }
             }
         }
 
-        for (field, value) in session.configuration.HTTPAdditionalHeaders! {
-            switch field {
-            case "Cookie":
-                continue
-            default:
-                components.append("-H \"\(field): \(value)\"")
+        if session.configuration.HTTPAdditionalHeaders != nil {
+            for (field, value) in session.configuration.HTTPAdditionalHeaders! {
+                switch field {
+                case "Cookie":
+                    continue
+                default:
+                    components.append("-H \"\(field): \(value)\"")
+                }
             }
         }
         
@@ -1321,7 +1333,7 @@ extension Request {
     /**
         Adds a handler to be called once the request has finished.
 
-    :param: completionHandler A closure to be executed once the request has finished. The closure takes 4 arguments: the URL request, the URL response, if one was received, the string, if one could be created from the URL response and data, and any error produced while creating the string.
+        :param: completionHandler A closure to be executed once the request has finished. The closure takes 4 arguments: the URL request, the URL response, if one was received, the string, if one could be created from the URL response and data, and any error produced while creating the string.
 
         :returns: The request.
     */
@@ -1356,7 +1368,7 @@ extension Request {
     */
     public class func JSONResponseSerializer(options: NSJSONReadingOptions = .AllowFragments) -> Serializer {
         return { (request, response, data) in
-            if data == nil {
+            if data == nil || data?.length == 0 {
                 return (nil, nil)
             }
 
@@ -1405,7 +1417,7 @@ extension Request {
     */
     public class func propertyListResponseSerializer(options: NSPropertyListReadOptions = 0) -> Serializer {
         return { (request, response, data) in
-            if data == nil {
+            if data == nil || data?.length == 0 {
                 return (nil, nil)
             }
 
