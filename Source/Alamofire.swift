@@ -25,6 +25,11 @@ import Foundation
 /// Alamofire errors
 public let AlamofireErrorDomain = "com.alamofire.error"
 
+public enum AlamofireErrorCode: Int {
+    case Unknown = -1
+    case SecurityPolicyViolation = 1
+}
+
 /**
     HTTP method definitions.
 
@@ -704,9 +709,11 @@ public class Request {
 
     class TaskDelegate: NSObject, NSURLSessionTaskDelegate {
         let task: NSURLSessionTask
-        let securityPolicy: AFSecurityPolicy
         let queue: dispatch_queue_t
         let progress: NSProgress
+
+        let securityPolicy: AFSecurityPolicy
+        var isCancelledBySecurityPolicy = false
 
         var data: NSData? { return nil }
         private(set) var error: NSError?
@@ -753,13 +760,13 @@ public class Request {
                 if challenge.previousFailureCount > 0 {
                     disposition = .CancelAuthenticationChallenge
                 } else {
-                    // TODO: Incorporate Trust Evaluation & TLS Chain Validation
-
+                    // Incorporate Trust Evaluation & TLS Chain Validation
                     switch challenge.protectionSpace.authenticationMethod! {
                     case NSURLAuthenticationMethodServerTrust:
                         if securityPolicy.evaluateServerTrust(challenge.protectionSpace.serverTrust, forDomain: challenge.protectionSpace.host) {
                             credential = NSURLCredential(forTrust: challenge.protectionSpace.serverTrust)
                         } else {
+                            isCancelledBySecurityPolicy = true
                             disposition = .CancelAuthenticationChallenge
                         }
                     default:
@@ -786,7 +793,11 @@ public class Request {
 
         func URLSession(session: NSURLSession!, task: NSURLSessionTask!, didCompleteWithError error: NSError!) {
             if error != nil {
-                self.error = error
+                if isCancelledBySecurityPolicy {
+                    self.error = NSError(domain: AlamofireErrorDomain, code: AlamofireErrorCode.SecurityPolicyViolation.rawValue, userInfo: [NSLocalizedDescriptionKey: "Security Policy violated by server, request cancelled", NSUnderlyingErrorKey: error, NSURLErrorFailingURLErrorKey: task.originalRequest.URL])
+                } else {
+                    self.error = error
+                }
             }
 
             dispatch_resume(queue)
@@ -876,7 +887,7 @@ extension Request {
         dispatch_async(delegate.queue) {
             if self.response != nil && self.delegate.error == nil {
                 if !validation(self.request, self.response!) {
-                    self.delegate.error = NSError(domain: AlamofireErrorDomain, code: -1, userInfo: nil)
+                    self.delegate.error = NSError(domain: AlamofireErrorDomain, code: AlamofireErrorCode.Unknown.rawValue, userInfo: nil)
                 }
             }
         }
