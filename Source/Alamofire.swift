@@ -786,7 +786,12 @@ public class Request {
         func URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError error: NSError?) {
             if error != nil {
                 if isCancelledBySecurityPolicy {
-                    self.error = NSError(domain: AlamofireErrorDomain, code: AlamofireErrorCode.SecurityPolicyViolation.rawValue, userInfo: [NSLocalizedDescriptionKey: "Security Policy violated by server, request cancelled", NSUnderlyingErrorKey: error, NSURLErrorFailingURLErrorKey: task.originalRequest.URL])
+                    let userInfo: [NSObject: AnyObject] = [
+                        NSUnderlyingErrorKey: error ?? NSNull(),
+                        NSLocalizedDescriptionKey: "Security Policy violated by server, request cancelled",
+                        NSURLErrorFailingURLErrorKey: task.originalRequest.URL ?? NSNull()
+                    ]
+                    self.error = NSError(domain: AlamofireErrorDomain, code: AlamofireErrorCode.SecurityPolicyViolation.rawValue, userInfo: userInfo)
                 } else {
                     self.error = error
                 }
