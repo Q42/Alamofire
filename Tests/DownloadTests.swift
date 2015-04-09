@@ -40,8 +40,6 @@ class AlamofireDownloadResponseTestCase: XCTestCase {
 
         Alamofire.download(.GET, URL, destination)
             .response { request, response, _, error in
-                expectation.fulfill()
-
                 XCTAssertNotNil(request, "request should not be nil")
                 XCTAssertNotNil(response, "response should not be nil")
 
@@ -72,6 +70,10 @@ class AlamofireDownloadResponseTestCase: XCTestCase {
                 } else {
                     XCTFail("data should exist for contents of URL")
                 }
+
+                fileManager.removeItemAtURL(file, error: nil)
+
+                expectation.fulfill()
         }
 
         waitForExpectationsWithTimeout(10) { (error) in
@@ -89,13 +91,13 @@ class AlamofireDownloadResponseTestCase: XCTestCase {
 
         let download = Alamofire.download(.GET, URL, destination)
         download.progress { (bytesRead, totalBytesRead, totalBytesExpectedToRead) -> Void in
-            expectation.fulfill()
-
             XCTAssert(bytesRead > 0, "bytesRead should be > 0")
             XCTAssert(totalBytesRead > 0, "totalBytesRead should be > 0")
             XCTAssert(totalBytesExpectedToRead == -1, "totalBytesExpectedToRead should be -1")
 
             download.cancel()
+
+            expectation.fulfill()
         }
 
         waitForExpectationsWithTimeout(10) { (error) in
