@@ -120,12 +120,18 @@ public enum ParameterEncoding {
             let options = NSJSONWritingOptions.allZeros
             if let data = NSJSONSerialization.dataWithJSONObject(parameters!, options: options, error: &error) {
                 mutableURLRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                mutableURLRequest.setValue("\(data.length)", forHTTPHeaderField: "Content-Length")
                 mutableURLRequest.HTTPBody = data
+            } else {
+                mutableURLRequest.setValue("0", forHTTPHeaderField: "Content-Length")
             }
         case .PropertyList(let (format, options)):
             if let data = NSPropertyListSerialization.dataWithPropertyList(parameters!, format: format, options: options, error: &error) {
                 mutableURLRequest.setValue("application/x-plist", forHTTPHeaderField: "Content-Type")
+                mutableURLRequest.setValue("\(data.length)", forHTTPHeaderField: "Content-Length")
                 mutableURLRequest.HTTPBody = data
+            } else {
+                mutableURLRequest.setValue("0", forHTTPHeaderField: "Content-Length")
             }
         case .Custom(let closure):
             return closure(mutableURLRequest, parameters)
