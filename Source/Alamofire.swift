@@ -114,7 +114,9 @@ public enum ParameterEncoding {
                     mutableURLRequest.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
                 }
 
-                mutableURLRequest.HTTPBody = query(parameters!).dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: false)
+                let data = query(parameters!).dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: false)
+                mutableURLRequest.HTTPBody = data
+                mutableURLRequest.setValue("\(data.length)", forHTTPHeaderField: "Content-Length")
             }
         case .JSON:
             let options = NSJSONWritingOptions.allZeros
