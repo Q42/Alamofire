@@ -114,23 +114,31 @@ public enum ParameterEncoding {
                     URLComponents.percentEncodedQuery = (URLComponents.percentEncodedQuery != nil ? URLComponents.percentEncodedQuery! + "&" : "") + query(parameters!)
                     mutableURLRequest.URL = URLComponents.URL
                 }
+                mutableURLRequest.setValue("0", forHTTPHeaderField: "Content-Length")
             } else {
                 if mutableURLRequest.valueForHTTPHeaderField("Content-Type") == nil {
                     mutableURLRequest.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
                 }
-
-                mutableURLRequest.HTTPBody = query(parameters!).dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: false)
+                let data = query(parameters!).dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: false)
+                mutableURLRequest.HTTPBody = data
+                mutableURLRequest.setValue("\(data?.length ?? 0)", forHTTPHeaderField: "Content-Length")
             }
         case .JSON:
             let options = NSJSONWritingOptions.allZeros
             if let data = NSJSONSerialization.dataWithJSONObject(parameters!, options: options, error: &error) {
                 mutableURLRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 mutableURLRequest.HTTPBody = data
+                mutableURLRequest.setValue("\(data.length)", forHTTPHeaderField: "Content-Length")
+            } else {
+                mutableURLRequest.setValue("0", forHTTPHeaderField: "Content-Length")
             }
         case .PropertyList(let (format, options)):
             if let data = NSPropertyListSerialization.dataWithPropertyList(parameters!, format: format, options: options, error: &error) {
                 mutableURLRequest.setValue("application/x-plist", forHTTPHeaderField: "Content-Type")
                 mutableURLRequest.HTTPBody = data
+                mutableURLRequest.setValue("\(data.length)", forHTTPHeaderField: "Content-Length")
+            } else {
+                mutableURLRequest.setValue("0", forHTTPHeaderField: "Content-Length")
             }
         case .Custom(let closure):
             return closure(mutableURLRequest, parameters)
